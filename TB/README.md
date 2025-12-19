@@ -73,7 +73,7 @@ This is a categorized list of SV files used to build this testbench.
 *coverage collector*
 * apb_coverage_collector.sv
 
-**irq monitor**
+**irq (interrupt request) monitor**
 * irq_monitor.sv
 
 **Environment and environment configuration object**
