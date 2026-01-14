@@ -41,7 +41,7 @@
       apb_seq_item_mon item;
       item = apb_seq_item_mon::type_id::create("item");
 
-      //It is important to use "LHS !== 1" instead of "LHS !== 1" to handle the case where LHS = x
+      //It is important to use "LHS !== 1" instead of "LHS != 1" to handle the case where LHS = x
       while(apb_vif.psel !== 1) begin  
           @(posedge apb_vif.pclk);
           item.m_prev_item_delay++;
@@ -84,4 +84,5 @@
       `uvm_info(this.get_name, item.convert2string, UVM_LOW) 
   endtask: monitor
     
+
 `endif //APB_MONITOR
