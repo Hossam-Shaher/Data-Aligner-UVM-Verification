@@ -34,7 +34,7 @@
     
     initial begin
       assert (DATA_WIDTH >= 8) else
-        $error($sformatf("DATA_WIDTH must be bigger than 8 but detected value %0d", DATA_WIDTH));
+        $error("DATA_WIDTH shall be bigger than 8, but detected value is %0d", DATA_WIDTH);
     end
     
     //Rule #3: Once valid becomes high, it must stay high until ready becomes high. 
@@ -178,5 +178,6 @@
       $error("Detected that size + offset is greater than the data width, in bytes.");
     
   endinterface
+
 
 `endif
