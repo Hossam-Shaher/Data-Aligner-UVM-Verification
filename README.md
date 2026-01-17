@@ -26,7 +26,7 @@ These **registers and their fields** are shown below.
 
 *Figure*
 
-For more details about the Data Aligner module (its interfaces, registers, functionality, and more), see its specification: *Aligener Datasheet - v1.1*.
+For more information about the Data Aligner module (its interfaces, registers, functionality, and more), see its specification: *Aligner Datasheet - v1.1*.
 
 **Note:** This project is the course project of this Udemy course: [`Design Verification with SystemVerilog/UVM`](https://www.udemy.com/course/design-verification-with-systemverilog-uvm/).
 
