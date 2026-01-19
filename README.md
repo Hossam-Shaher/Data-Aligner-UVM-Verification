@@ -42,10 +42,10 @@ In this project, the Data Aligner is modeled and verified using the **SystemVeri
     * It follows the Universal Verification Methodology (UVM). (**Multiple agents** and **a Register Abstraction Layer (RAL)** are used).
     * It is file-based and well-constructed
 
-2. **"Data Aligner - Architecture of the verification environment" (A PDF document).**
+2. **"Data Aligner - Architecture of The Verification Environment" (A PDF document).**
     * It shows the architecture of the verification environment, the transaction-level communication between its UVM components, and UML class diagrams of some classes.
 
-3. **"Data Aligner - Verification plan" (A PDF document).**
+3. **"Data Aligner - Verification Plan" (A PDF document).**
     * It contains three plans: (1) test plan, (2) coverage plan, and (3) assertion plan.
 
 4. **"Data Aligner - Results" (A PDF document).**
@@ -53,7 +53,7 @@ In this project, the Data Aligner is modeled and verified using the **SystemVeri
 
 The following figures shows **the structure of the UVM testbench**. 
 
-For more details, see: *Data Aligner - Architecture of the verification environment*.  
+For more details, see: *Data Aligner - Architecture of The Verification Environment*.  
 
 
 <img width="657" height="539" alt="image" src="https://github.com/user-attachments/assets/5809b388-6114-4c27-a3d5-34be89543ef7" />
