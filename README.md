@@ -55,4 +55,4 @@ The following figures shows **the structure of the UVM testbench**. For more det
 
 <img width="657" height="539" alt="image" src="https://github.com/user-attachments/assets/5809b388-6114-4c27-a3d5-34be89543ef7" />
 
-<img width="1090" height="613" alt="image" src="https://github.com/user-attachments/assets/c8974313-b44b-40f0-9329-c94fa4e0662a" />
+<img width="1057" height="599" alt="image" src="https://github.com/user-attachments/assets/c70872c2-bb49-4686-9d0f-dd45a65c0336" />
