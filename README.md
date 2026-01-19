@@ -3,7 +3,7 @@ The **Data Aligner** module takes in an unaligned stream of data and outputs it 
 
 The Data Aligner has **three interfaces**:
 
-1. A register access interface 
+1. A register access interface. 
 2. An RX interface through which the Data Aligner receives the unaligned data.
 3. A TX interface through which the Data Aligner sends the aligned data.
 
@@ -13,7 +13,7 @@ In total, the Data Aligner has 23 pins (inputs and outputs).
 
 The **block diagram** of the Data Aligner is shown below.
 
-*Figure*
+<img width="1038" height="391" alt="image" src="https://github.com/user-attachments/assets/a9da31c3-d43e-4755-bd0c-fe4bd22f4412" />
 
 The Data Aligner has several **control and status registers** accessible though the APB interface:
 
@@ -24,7 +24,7 @@ The Data Aligner has several **control and status registers** accessible though 
 
 These **registers and their fields** are shown below.
 
-*Figure*
+<img width="976" height="468" alt="image" src="https://github.com/user-attachments/assets/7c0df5c6-8365-4f25-a5a5-30dea7ed728d" />
 
 For more information about the Data Aligner module (its interfaces, registers, functionality, and more), see its specification: *Aligner Datasheet - v1.1*.
 
@@ -36,29 +36,23 @@ In this project, the Data Aligner is modeled and verified using the **SystemVeri
 
 **This repository contains:**
 
-1. The testbench used to verify this module.
+1. **The testbench used to verify this module.**
 
     * It is written in SystemVerilog. (**Constrained randomization**, **functional coverage**, and **assertions** are used). 
     * It follows the Universal Verification Methodology (UVM). (**Multiple agents** and **a Register Abstraction Layer (RAL)** are used).
     * It is file-based and well-constructed
 
-2. "Data Aligner - Architecture of the verification environment" (A PDF document).
+2. **"Data Aligner - Architecture of the verification environment" (A PDF document).**
+    * It shows the architecture of the verification environment, the transaction-level communication between its UVM components, and UML class diagrams of some classes.
 
-    * It contais a figure showing the structure of the UVM testbench (components and ports).
-    * It contains UML class diagrams for the classes in the testbench.
-    * It documents the model.
-
-3. "Data Aligner - Verification plan" (A PDF document).
+3. **"Data Aligner - Verification plan" (A PDF document).**
     * It contains three plans: (1) test plan, (2) coverage plan, and (3) assertion plan.
 
-4. "Data Aligner - Results" (A PDF document).
+4. **"Data Aligner - Results" (A PDF document).**
     * It contains: (1) testing results, (2) coverage results, and (3) assertion results. 
 
+The following figures shows **the structure of the UVM testbench**. For more details, see: *Data Aligner - Architecture of the verification environment*.  
 
-The following figure shows **the structure of the UVM testbench**.
+<img width="657" height="539" alt="image" src="https://github.com/user-attachments/assets/5809b388-6114-4c27-a3d5-34be89543ef7" />
 
-*Figure*
-
-The following figure shows **the class inheritance tree of the tests used in this testbench**.
-
-*Figure*
+<img width="1090" height="613" alt="image" src="https://github.com/user-attachments/assets/c8974313-b44b-40f0-9329-c94fa4e0662a" />
