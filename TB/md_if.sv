@@ -26,15 +26,15 @@
     //Rule #1: DATA_WIDTH must be a power of 2. 
     
     initial begin
-      assert ($countones(DATA_WIDTH) == 1) else
-        $error("DATA_WIDTH is not a power of two - value in binary: 'b%0b, in hex is 'h%0h, in dec is %0d", DATA_WIDTH, DATA_WIDTH, DATA_WIDTH);
+      DATA_WIDTH_POWER_OF_2_A : assert ($countones(DATA_WIDTH) == 1) else
+        $error("DATA_WIDTH is NOT a power of two - value in binary: 'b%0b, in hex is 'h%0h, in dec is %0d", DATA_WIDTH, DATA_WIDTH, DATA_WIDTH);
     end
     
     //Rule #2: DATA_WIDTH minimum legal value is 8. 
     
     initial begin
-      assert (DATA_WIDTH >= 8) else
-        $error("DATA_WIDTH shall be bigger than 8, but detected value is %0d", DATA_WIDTH);
+      DATA_WIDTH_BIGGER_THAN_OR_EQUAL_8_A : assert (DATA_WIDTH >= 8) else
+        $error("DATA_WIDTH shall be bigger or equal than 8, but detected value is %0d", DATA_WIDTH);
     end
     
     //Rule #3: Once valid becomes high, it must stay high until ready becomes high. 
@@ -178,6 +178,5 @@
       $error("Detected that size + offset is greater than the data width, in bytes.");
     
   endinterface
-
 
 `endif
