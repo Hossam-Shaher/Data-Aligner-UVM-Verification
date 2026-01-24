@@ -33,11 +33,11 @@
       soft post_drive_delay <= 5;
     }
 
-    constraint data_default {
+    constraint size_default {
       soft size == 1;
     }
 
-    constraint data_hard {
+    constraint size_hard {
       size > 0;
     }
 
@@ -67,9 +67,10 @@
     //A value of 0 means that the MD item will be one clock cycle long
     rand int unsigned length;
 
-    rand md_response_t response; 	//drives vif.err based on on "vif.offset" and "vif.size"
+    md_response_t response = MD_OKAY; 	//In the spec, it is not determined when md_tx_err outputs 0 (MD_ERR),
+    									                  //so just let it be MD_OKAY always
 
-    rand bit ready_at_end;			//drives vif.ready at the end of the MD item 
+    rand bit ready_at_end;				      //drives vif.ready at the end of the MD item 
 
     constraint length_default {
       soft length <= 5;
