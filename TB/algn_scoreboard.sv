@@ -26,9 +26,18 @@
     uvm_tlm_analysis_fifo#(bit)		actual_irq_transactions_fifo;
     
     //Counters used in report_phase
-    int unsigned		mismatch_count = 0;
-    int unsigned		leftovers_count = 0;
-        
+    int unsigned	mismatch_count = 0;
+    int unsigned	leftovers_count = 0;
+    int unsigned 	num_ones_in_expected_irq_fifo = 0;		
+    int unsigned 	num_ones_in_actual_irq_fifo = 0;
+    
+    //Note:
+    //   "num_ones_in_*_irq_fifo" is the number of "ones" (transactions)
+    //   that was inserted in "*_irq_transactions_fifo" during the simulation.
+    //   The algorithm of checking irq is different BCZ irq_monitor does not monitor irq continuously 
+    //   and does not send a continuous stream of ones and zeros.. It just send a one when it detects a one. 
+    //   The model shows the same behavior.
+    
     function new(string name = "", uvm_component parent);
       super.new(name, parent);
     endfunction: new
@@ -115,16 +124,18 @@
              end
         end: TX_information
 
-        forever begin: IRQ_information	
+        begin: IRQ_information	
              fork   
-                expected_irq_transactions_fifo.get( expected_irq_transaction ); 
-                actual_irq_transactions_fifo.get(	actual_irq_transaction 	);
+               forever begin
+                 expected_irq_transactions_fifo.get( expected_irq_transaction ); 
+                 num_ones_in_expected_irq_fifo++;
+               end
+               
+               forever begin
+                 actual_irq_transactions_fifo.get(	actual_irq_transaction 	);
+                 num_ones_in_actual_irq_fifo++;
+               end
              join
-             if ( expected_irq_transaction !== actual_irq_transaction ) begin
-                  `uvm_error( this.get_name(), $sformatf("IRQ_information MISMATCH:: expected_irq_transaction: %0d - actual_irq_transaction: %0d",
-                                                     	 expected_irq_transaction, actual_irq_transaction ) )  
-                  mismatch_count++;
-             end
         end: IRQ_information
 
     join_none
@@ -167,9 +178,18 @@
      `uvm_error( "actual_irq_transactions_fifo", $sformatf("Found a leftover transaction: %0d", bit_transaction ) )
      leftovers_count++;
    end       
+    
+    //checking calculations related to irq
+   if ( num_ones_in_expected_irq_fifo !== num_ones_in_actual_irq_fifo ) begin
+     `uvm_error( this.get_name(), 
+                 $sformatf("IRQ_information MISMATCH:: num_ones_in_expected_irq_fifo: %0d - num_ones_in_actual_irq_fifo: %0d",
+                                                       num_ones_in_expected_irq_fifo, num_ones_in_actual_irq_fifo ) )  
+     mismatch_count++;
+   end
 
   endfunction: check_phase
 
+  //report_phase
   function void algn_scoreboard:: report_phase (uvm_phase phase);
     if( mismatch_count == 0) begin 
       `uvm_info("SCOREBOARD RESULTS", $sformatf("Mismatches:: PASS; no mismatches") , UVM_NONE)
