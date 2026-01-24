@@ -65,7 +65,7 @@
 
           //RULE 5 (Protocol checks)
           if(enable_checks == 1) begin
-              RULE_5: assert(item.m_length <= stuck_threshold) else begin
+              INFINITE_LENGTH_APB_A: assert(item.m_length <= stuck_threshold) else begin
                 `uvm_fatal("PROTOCOL_ERROR", $sformatf("The APB transfer reached the stuck threshold value of %0d", item.m_length))
               end
           end
@@ -84,5 +84,4 @@
       `uvm_info(this.get_name, item.convert2string, UVM_LOW) 
   endtask: monitor
     
-
 `endif //APB_MONITOR
