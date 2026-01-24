@@ -65,7 +65,7 @@
 
       //RULE 16 (Protocol checks)
       if(enable_checks == 1) begin
-        RULE_16: assert(item.length <= stuck_threshold) else begin
+        INFINITE_LENGTH_MD_A: assert(item.length <= stuck_threshold) else begin
           `uvm_fatal("PROTOCOL_ERROR", $sformatf("The MD transfer reached the stuck threshold value of %0d", item.length))
         end
       end
