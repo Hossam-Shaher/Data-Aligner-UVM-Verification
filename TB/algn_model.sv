@@ -23,7 +23,7 @@
     
     //Ports 
     uvm_analysis_port#(md_response_t) 		port_out_rx;				//for sending the expected response on the RX interface
-    uvm_analysis_port#(md_seq_item_mon) 	port_out_tx;				//for sending the expected response on the TX interface
+    uvm_analysis_port#(md_seq_item_mon) 	port_out_tx;				//for sending the expected information on the TX interface
     uvm_analysis_port#(bit) 				port_out_irq;				//for sending the expected interrupt request
     
     //FIFOs and Queues
@@ -50,34 +50,30 @@
     extern local function md_response_t get_exp_response(md_seq_item_mon item);
     extern local function void inc_cnt_drop( );
     extern local function void set_max_drop();
+    extern local function void push_to_rx_fifo_nb(md_seq_item_mon item);    
       
     //Rx FIFO
     extern local function void inc_rx_lvl();
     extern local function void set_rx_fifo_full();
-    extern local function void push_to_rx_fifo_nb(md_seq_item_mon item);
-    
-    //[intermediate] buffer builder
-    extern local function void build_buffer_nb();
- 
-    //[intermediate] buffer
     extern local function void dec_rx_lvl();
     extern local function void set_rx_fifo_empty();
+      
+    //controller
+    extern local function void build_buffer_nb();
     extern local task pop_from_rx_fifo(ref md_seq_item_mon item); 
-
-    //align
-    extern local function void split(int unsigned num_bytes, md_seq_item_mon item, ref md_seq_item_mon items[$]);
     extern local function void align_nb();
+    extern local function void split(int unsigned num_bytes, md_seq_item_mon item, ref md_seq_item_mon items[$]);
+    extern local task push_to_tx_fifo(md_seq_item_mon item);
       
     //Tx FIFO
     extern local function void inc_tx_lvl();
     extern local function void set_tx_fifo_full();
-    extern local task push_to_tx_fifo(md_seq_item_mon item);
+    extern local function void dec_tx_lvl();
+    extern local function void set_tx_fifo_empty();     
       
 	//Tx Controller
-    extern local function void dec_tx_lvl();
-    extern local function void set_tx_fifo_empty();
-    extern local task pop_from_tx_fifo(ref md_seq_item_mon item);
     extern local function void tx_ctrl_nb();
+    extern local task pop_from_tx_fifo(ref md_seq_item_mon item);
 
     //port_in_tx
     extern function void write_in_tx(md_seq_item_mon item_mon);
@@ -111,8 +107,8 @@
     port_out_rx  = new("port_out_rx", this);
     port_out_tx  = new("port_out_tx", this);
     port_out_irq = new("port_out_irq", this);
-    rx_fifo      = new("rx_fifo", this, 8);
-    tx_fifo      = new("tx_fifo", this, 8);
+    rx_fifo      = new("rx_fifo", this, `FIFO_DEPTH );
+    tx_fifo      = new("tx_fifo", this, `FIFO_DEPTH );
 
     if( ! uvm_config_db#(virtual algn_if)::get(this, "", "algn_vif", algn_vif) ) begin
       `uvm_error( this.get_full_name, "algn_vif NOT found" )
@@ -126,6 +122,24 @@
     align_nb();
     tx_ctrl_nb();
   endfunction: build_phase
+      
+  //write_in_rx
+  //-----------
+      
+  function void algn_model:: write_in_rx(md_seq_item_mon item_mon);
+    case( get_exp_response(item_mon) )
+        MD_ERR : begin
+          inc_cnt_drop();
+          port_out_rx.write(MD_ERR);
+        end
+        MD_OKAY : begin
+          push_to_rx_fifo_nb(item_mon);
+        end
+        default : begin
+          `uvm_fatal("ALGORITHM_ISSUE", $sformatf("Un-supported value for response: %0d", get_exp_response(item_mon)))
+        end
+    endcase
+  endfunction: write_in_rx
 
   //get_exp_response
   //----------------
@@ -137,21 +151,6 @@
 
     return MD_OKAY;
   endfunction: get_exp_response
-  
-  //set_max_drop
-  //------------
-      
-  function void algn_model:: set_max_drop();
-    assert (reg_block.IRQ.MAX_DROP.predict(1));
-
-    `uvm_info("DEBUG", $sformatf("Drop counter reached max value - %0s: %0d",
-                                 reg_block.IRQ.MAX_DROP.get_full_name(),
-                                 reg_block.IRQ.MAX_DROP.get_mirrored_value()), UVM_NONE)
-
-    if(reg_block.IRQEN.MAX_DROP.get_mirrored_value() == 1) begin
-      port_out_irq.write(1);
-    end
-  endfunction: set_max_drop
 
   //inc_cnt_drop
   //------------
@@ -171,32 +170,21 @@
       end
     end
   endfunction: inc_cnt_drop
-
-  //set_rx_fifo_full
-  //----------------
+  
+  //set_max_drop
+  //------------
       
-  function void algn_model:: set_rx_fifo_full();
-    assert (reg_block.IRQ.RX_FIFO_FULL.predict(1));
+  function void algn_model:: set_max_drop();
+    assert (reg_block.IRQ.MAX_DROP.predict(1));
 
-    `uvm_info("DEBUG", $sformatf("RX FIFO became full - %0s: %0d",
-                                 reg_block.IRQ.RX_FIFO_FULL.get_full_name(),
-                                 reg_block.IRQ.RX_FIFO_FULL.get_mirrored_value()), UVM_NONE)
+    `uvm_info("DEBUG", $sformatf("Drop counter reached max value - %0s: %0d",
+                                 reg_block.IRQ.MAX_DROP.get_full_name(),
+                                 reg_block.IRQ.MAX_DROP.get_mirrored_value()), UVM_NONE)
 
-    if(reg_block.IRQEN.RX_FIFO_FULL.get_mirrored_value() == 1) begin
+    if(reg_block.IRQEN.MAX_DROP.get_mirrored_value() == 1) begin
       port_out_irq.write(1);
     end
-  endfunction: set_rx_fifo_full
-
-  //inc_rx_lvl
-  //----------
-      
-  function void algn_model:: inc_rx_lvl();
-    assert (reg_block.STATUS.RX_LVL.predict(reg_block.STATUS.RX_LVL.get_mirrored_value() + 1));
-
-    if(reg_block.STATUS.RX_LVL.get_mirrored_value() == rx_fifo.size()) begin
-      set_rx_fifo_full();
-    end
-  endfunction: inc_rx_lvl
+  endfunction: set_max_drop
 
   //push_to_rx_fifo_nb
   //------------------
@@ -217,6 +205,43 @@
     join_none
   endfunction: push_to_rx_fifo_nb
 
+  //inc_rx_lvl
+  //----------
+      
+  function void algn_model:: inc_rx_lvl();
+    assert (reg_block.STATUS.RX_LVL.predict(reg_block.STATUS.RX_LVL.get_mirrored_value() + 1));
+
+    if(reg_block.STATUS.RX_LVL.get_mirrored_value() == rx_fifo.size()) begin
+      set_rx_fifo_full();
+    end
+  endfunction: inc_rx_lvl
+  
+  //set_rx_fifo_full
+  //----------------
+      
+  function void algn_model:: set_rx_fifo_full();
+    assert (reg_block.IRQ.RX_FIFO_FULL.predict(1));
+
+    `uvm_info("DEBUG", $sformatf("RX FIFO became full - %0s: %0d",
+                                 reg_block.IRQ.RX_FIFO_FULL.get_full_name(),
+                                 reg_block.IRQ.RX_FIFO_FULL.get_mirrored_value()), UVM_NONE)
+
+    if(reg_block.IRQEN.RX_FIFO_FULL.get_mirrored_value() == 1) begin
+      port_out_irq.write(1);
+    end
+  endfunction: set_rx_fifo_full
+
+  //dec_rx_lvl
+  //----------
+
+  function void algn_model:: dec_rx_lvl();
+    assert (reg_block.STATUS.RX_LVL.predict(reg_block.STATUS.RX_LVL.get_mirrored_value() - 1));
+
+    if(reg_block.STATUS.RX_LVL.get_mirrored_value() == 0) begin
+      set_rx_fifo_empty();
+    end
+  endfunction: dec_rx_lvl
+
   //set_rx_fifo_empty
   //-----------------
 
@@ -231,30 +256,6 @@
       port_out_irq.write(1);
     end
   endfunction: set_rx_fifo_empty
-
-  //dec_rx_lvl
-  //----------
-
-  function void algn_model:: dec_rx_lvl();
-    assert (reg_block.STATUS.RX_LVL.predict(reg_block.STATUS.RX_LVL.get_mirrored_value() - 1));
-
-    if(reg_block.STATUS.RX_LVL.get_mirrored_value() == 0) begin
-      set_rx_fifo_empty();
-    end
-  endfunction: dec_rx_lvl
-
-  //pop_from_rx_fifo
-  //----------------
-
-  task algn_model:: pop_from_rx_fifo(ref md_seq_item_mon item);
-    rx_fifo.get(item);
-
-    dec_rx_lvl();
-
-    `uvm_info("DEBUG", $sformatf("RX FIFO pop - new level: %0d, popped entry: %0s",
-                                 reg_block.STATUS.RX_LVL.get_mirrored_value(),
-                                 item.convert2string()), UVM_NONE)
-  endtask: pop_from_rx_fifo
 
   //build_buffer_nb
   //---------------
@@ -276,45 +277,94 @@
     join_none
   endfunction: build_buffer_nb
 
-  //set_tx_fifo_full
+  //pop_from_rx_fifo
   //----------------
 
-  function void algn_model:: set_tx_fifo_full();
-    assert (reg_block.IRQ.TX_FIFO_FULL.predict(1));
+  task algn_model:: pop_from_rx_fifo(ref md_seq_item_mon item);
+    rx_fifo.get(item);
 
-    `uvm_info("DEBUG", $sformatf("TX FIFO became full - %0s: %0d",
-                                 reg_block.IRQ.TX_FIFO_FULL.get_full_name(),
-                                 reg_block.IRQ.TX_FIFO_FULL.get_mirrored_value()), UVM_NONE)
+    dec_rx_lvl();
 
-    if(reg_block.IRQEN.TX_FIFO_FULL.get_mirrored_value() == 1) begin
-      port_out_irq.write(1);
-    end
-  endfunction: set_tx_fifo_full
-
-  //inc_tx_lvl
-  //----------
-
-  function void algn_model:: inc_tx_lvl();
-    assert (reg_block.STATUS.TX_LVL.predict(reg_block.STATUS.TX_LVL.get_mirrored_value() + 1));
-
-    if(reg_block.STATUS.TX_LVL.get_mirrored_value() == tx_fifo.size()) begin
-      set_tx_fifo_full();
-    end
-  endfunction: inc_tx_lvl
-
-  //push_to_tx_fifo
-  //---------------
-
-  task algn_model:: push_to_tx_fifo(md_seq_item_mon item);
-    tx_fifo.put(item);
-
-    inc_tx_lvl();
-
-    `uvm_info("DEBUG", $sformatf("TX FIFO push - new level: %0d, pushed entry: %0s",
-                                 reg_block.STATUS.TX_LVL.get_mirrored_value(),
+    `uvm_info("DEBUG", $sformatf("RX FIFO pop - new level: %0d, popped entry: %0s",
+                                 reg_block.STATUS.RX_LVL.get_mirrored_value(),
                                  item.convert2string()), UVM_NONE)
-  endtask: push_to_tx_fifo
+  endtask: pop_from_rx_fifo   
 
+  //align_nb
+  //--------
+
+  function void algn_model:: align_nb();
+    fork: fork_join_none
+      forever begin: forever_loop
+        int unsigned ctrl_size 	 = reg_block.CTRL.SIZE.get_mirrored_value();
+        int unsigned ctrl_offset = reg_block.CTRL.OFFSET.get_mirrored_value();
+
+        #1step;
+        /*
+        #1step delays the following logic a little bit after the positive edge of the clock.
+        Why? To give time to build_buffer() to push data in the intermediate buffer. 
+        So, at a certain positive edge of the clock, 
+        firstly, build_buffer() will push data in the intermediate buffer, and then, 
+        after #1step, align() will pop that information from the buffer.
+        */
+
+        if( ctrl_size > (buffer.sum() with (item.size)) ) 	@(posedge algn_vif.clk);
+
+        else	// if( ctrl_size <= (buffer.sum() with (item.size)) ), you are ready to align! ENTER the outer_while!
+
+        while( ctrl_size <= (buffer.sum() with (item.size))) begin: outer_while
+          md_seq_item_mon tx_item = md_seq_item_mon::type_id::create("tx_item", this);
+
+          tx_item.offset = ctrl_offset;
+          void'(tx_item.begin_tr(buffer[0].get_begin_time()));
+
+          while(tx_item.size != ctrl_size) begin: inner_while
+            md_seq_item_mon buffer_item = buffer.pop_front();
+            /*
+            $display("inner_while::");
+            $display("     ctrl_size = %0d, ctrl_offset = %0d", ctrl_size, ctrl_offset);
+            $display("     buffer_item.data = %h, buffer_item.offset = %0d, buffer_item.size = %0d", buffer_item.data, buffer_item.offset, buffer_item.size);
+            $display("     tx_item.data = %h, tx_item.offset = %0d, tx_item.size = %0d", tx_item.data, tx_item.offset, tx_item.size);
+            */
+            if(tx_item.size + buffer_item.size <= ctrl_size) 
+            begin: NO_need_to_split
+                for( int i = 0; i <= (buffer_item.size*8 - 1); i++) 
+                  tx_item.data[i + tx_item.size*8 + tx_item.offset*8] = buffer_item.data[i + buffer_item.offset*8];
+                tx_item.size += buffer_item.size;
+                /*
+                $display("NO_need_to_split::");
+                $display("     buffer_item.data = %h, buffer_item.offset = %0d, buffer_item.size = %0d", buffer_item.data, buffer_item.offset, buffer_item.size);
+                $display("     tx_item.data = %h, tx_item.offset = %0d, tx_item.size = %0d", tx_item.data, tx_item.offset, tx_item.size);
+                */
+                if(tx_item.size == ctrl_size) begin
+                  tx_item.end_tr(buffer_item.get_end_time());
+                  push_to_tx_fifo(tx_item);
+                end
+            end: NO_need_to_split 
+
+            else	 //	if( tx_item.size + buffer_item.size > ctrl_size )
+            begin: NEED_to_split
+                int unsigned num_bytes_needed = ctrl_size - tx_item.size;
+                md_seq_item_mon splitted_items[$];
+
+                split(num_bytes_needed, buffer_item, splitted_items);
+
+                buffer.push_front(splitted_items[1]);
+                buffer.push_front(splitted_items[0]);
+                /*
+                $display("NEED_to_split::"); 
+                $display("     buffer_item.data = %h, buffer_item.offset = %0d, buffer_item.size = %0d", buffer_item.data, buffer_item.offset, buffer_item.size);
+                $display("     tx_item.data = %h, tx_item.offset = %0d, tx_item.size = %0d", tx_item.data, tx_item.offset, tx_item.size);
+                $display("     splitted_items[0].size = %0d, splitted_items[0].data = %h", splitted_items[0].size, splitted_items[0].data);
+                $display("     splitted_items[1].size = %0d, splitted_items[1].data = %h", splitted_items[1].size, splitted_items[1].data);
+                */
+            end: NEED_to_split
+          end: inner_while
+        end: outer_while
+      end: forever_loop 
+    join_none: fork_join_none
+  endfunction: align_nb
+      
   //split
   //-----
 
@@ -360,80 +410,57 @@
     end:  splitted_item_2
 
   endfunction: split
+      
+  //push_to_tx_fifo
+  //---------------
 
-  //align_nb
-  //--------
+  task algn_model:: push_to_tx_fifo(md_seq_item_mon item);
+    tx_fifo.put(item);
 
-  function void algn_model:: align_nb();
-    fork: fork_join_none
-      forever begin: forever_loop
-        int unsigned ctrl_size 	 = reg_block.CTRL.SIZE.get_mirrored_value();
-        int unsigned ctrl_offset = reg_block.CTRL.OFFSET.get_mirrored_value();
+    inc_tx_lvl();
 
-        #1step;
-        /*
-        #1step delays the following logic a little bit after the positive edge of the clock.
-        Why? To give time to build_buffer() to push data in the intermediate buffer. 
-        So, at a certain positive edge of the clock, 
-        firstly, build_buffer() will push data in the intermediate buffer, and then, 
-        after #1step, align() will pop that information from the buffer.
-        */
+    `uvm_info("DEBUG", $sformatf("TX FIFO push - new level: %0d, pushed entry: %0s",
+                                 reg_block.STATUS.TX_LVL.get_mirrored_value(),
+                                 item.convert2string()), UVM_NONE)
+  endtask: push_to_tx_fifo
+      
+  //inc_tx_lvl
+  //----------
 
-        if( ctrl_size > (buffer.sum() with (item.size)) ) 	@(posedge algn_vif.clk);
+  function void algn_model:: inc_tx_lvl();
+    assert (reg_block.STATUS.TX_LVL.predict(reg_block.STATUS.TX_LVL.get_mirrored_value() + 1));
 
-        else	// if( ctrl_size <= (buffer.sum() with (item.size)) ), you are ready to align! ENTER the outer_while!
+    if(reg_block.STATUS.TX_LVL.get_mirrored_value() == tx_fifo.size()) begin
+      set_tx_fifo_full();
+    end
+  endfunction: inc_tx_lvl
 
-        while( ctrl_size <= (buffer.sum() with (item.size))) begin: outer_while
-          md_seq_item_mon tx_item = md_seq_item_mon::type_id::create("tx_item", this);
+  //set_tx_fifo_full
+  //----------------
 
-          tx_item.offset = ctrl_offset;
-          void'(tx_item.begin_tr(buffer[0].get_begin_time()));
+  function void algn_model:: set_tx_fifo_full();
+    assert (reg_block.IRQ.TX_FIFO_FULL.predict(1));
 
-          while(tx_item.size != ctrl_size) begin: inner_while
-            md_seq_item_mon buffer_item = buffer.pop_front();
-            /*
-            $display("inner_while::");
-            $display("     tx_item.size = %0d, tx_item.offset = %0d, ctrl_size = %0d", tx_item.size, tx_item.offset, ctrl_size);
-            */
-            if(tx_item.size + buffer_item.size <= ctrl_size) 
-            begin: NO_need_to_split
-                for( int i = 0; i <= (buffer_item.size*8 - 1); i++) 
-                     tx_item.data[i + tx_item.offset*8 ] = buffer_item.data[i + buffer_item.offset*8];
-                tx_item.size += buffer_item.size;
-                /*
-                $display("NO_need_to_split::");
-                $display("     tx_item.size = %0d, buffer_item.size = %0d, ctrl_size = %0d", tx_item.size, buffer_item.size, ctrl_size);
-                $display("     tx_item.data = %h, buffer_item.data = %h", tx_item.data, buffer_item.data);
-                */
-                  if(tx_item.size == ctrl_size) begin
-                    tx_item.end_tr(buffer_item.get_end_time());
-                    push_to_tx_fifo(tx_item);
-                  end
-            end: NO_need_to_split 
+    `uvm_info("DEBUG", $sformatf("TX FIFO became full - %0s: %0d",
+                                 reg_block.IRQ.TX_FIFO_FULL.get_full_name(),
+                                 reg_block.IRQ.TX_FIFO_FULL.get_mirrored_value()), UVM_NONE)
 
-            else	 //	if( tx_item.size + buffer_item.size > ctrl_size )
-            begin: NEED_to_split
-                int unsigned num_bytes_needed = ctrl_size - tx_item.size;
-                md_seq_item_mon splitted_items[$];
+    if(reg_block.IRQEN.TX_FIFO_FULL.get_mirrored_value() == 1) begin
+      port_out_irq.write(1);
+    end
+  endfunction: set_tx_fifo_full
 
-                split(num_bytes_needed, buffer_item, splitted_items);
+  //dec_tx_lvl
+  //----------
 
-                buffer.push_front(splitted_items[1]);
-                buffer.push_front(splitted_items[0]);
-                /*
-                $display("NEED_to_split::"); 
-                $display("     tx_item.size = %0d, buffer_item.size = %0d, ctrl_size = %0d", tx_item.size, buffer_item.size, ctrl_size);
-                $display("     buffer_item.size = %0d, buffer_item.offset = %0d, buffer_item.data = %h", buffer_item.size, buffer_item.offset, buffer_item.data);
-                $display("     splitted_items[0].size = %0d, splitted_items[0].data = %h", splitted_items[0].size, splitted_items[0].data);
-                $display("     splitted_items[1].size = %0d, splitted_items[1].data = %h", splitted_items[1].size, splitted_items[1].data);
-                */
-            end: NEED_to_split
-          end: inner_while
-        end: outer_while
-      end: forever_loop 
-    join_none: fork_join_none
-  endfunction: align_nb
+  function void algn_model:: dec_tx_lvl();
+    assert (reg_block.STATUS.TX_LVL.predict(reg_block.STATUS.TX_LVL.get_mirrored_value() - 1));
 
+    if(reg_block.STATUS.TX_LVL.get_mirrored_value() == 0) begin
+      set_tx_fifo_empty();
+    end
+  endfunction: dec_tx_lvl      
+      
   //set_tx_fifo_empty
   //-----------------
 
@@ -448,30 +475,6 @@
       port_out_irq.write(1);
     end
   endfunction: set_tx_fifo_empty
-
-  //dec_tx_lvl
-  //----------
-
-  function void algn_model:: dec_tx_lvl();
-    assert (reg_block.STATUS.TX_LVL.predict(reg_block.STATUS.TX_LVL.get_mirrored_value() - 1));
-
-    if(reg_block.STATUS.TX_LVL.get_mirrored_value() == 0) begin
-      set_tx_fifo_empty();
-    end
-  endfunction: dec_tx_lvl
-
-  //pop_from_tx_fifo
-  //----------------
-      
-  task algn_model:: pop_from_tx_fifo(ref md_seq_item_mon item);
-    tx_fifo.get(item);
-
-    dec_tx_lvl();
-
-    `uvm_info("DEBUG", $sformatf("TX FIFO pop - new level: %0d, poped entry: %0s",
-                                 reg_block.STATUS.TX_LVL.get_mirrored_value(),
-                                 item.convert2string()), UVM_NONE)
-  endtask: pop_from_tx_fifo
 
   //tx_ctrl_nb
   //----------
@@ -488,24 +491,19 @@
       end
     join_none
   endfunction: tx_ctrl_nb
-
-  //write_in_rx
-  //-----------
       
-  function void algn_model:: write_in_rx(md_seq_item_mon item_mon);
-    case( get_exp_response(item_mon) )
-        MD_ERR : begin
-          inc_cnt_drop();
-          port_out_rx.write(MD_ERR);
-        end
-        MD_OKAY : begin
-          push_to_rx_fifo_nb(item_mon);
-        end
-        default : begin
-          `uvm_fatal("ALGORITHM_ISSUE", $sformatf("Un-supported value for response: %0d", get_exp_response(item_mon)))
-        end
-    endcase
-  endfunction: write_in_rx
+  //pop_from_tx_fifo
+  //----------------
+      
+  task algn_model:: pop_from_tx_fifo(ref md_seq_item_mon item);
+    tx_fifo.get(item);
+
+    dec_tx_lvl();
+
+    `uvm_info("DEBUG", $sformatf("TX FIFO pop - new level: %0d, poped entry: %0s",
+                                 reg_block.STATUS.TX_LVL.get_mirrored_value(),
+                                 item.convert2string()), UVM_NONE)
+  endtask: pop_from_tx_fifo
 
   //write_in_tx
   //-----------
