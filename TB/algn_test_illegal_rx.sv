@@ -11,7 +11,7 @@
       super.new(name, parent);
 
       md_sequence_master::type_id::set_type_override(md_sequence_master_err::get_type());
-      num_md_rx_transactions = 300;
+      num_md_rx_transactions = 500;
     endfunction: new
 
   endclass: algn_test_illegal_rx
