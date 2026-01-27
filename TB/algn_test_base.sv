@@ -8,7 +8,7 @@
 
     `uvm_component_utils(algn_test_base)
 
-    algn_env 		    m_algn_env;
+    algn_env 		m_algn_env;
     algn_env_config	m_algn_env_config;
 
     function new(string name, uvm_component parent);
@@ -17,7 +17,7 @@
 
     function void build_phase(uvm_phase phase);
       super.build_phase(phase);
-      m_algn_env 		    = algn_env::type_id::create("m_algn_env", this); 
+      m_algn_env 		= algn_env::type_id::create("m_algn_env", this); 
       m_algn_env_config = algn_env_config::type_id::create("m_algn_env_config", this);  
 
       if( ! uvm_config_db#(virtual apb_if)::get(this, "", "apb_vif", m_algn_env_config.m_apb_agent_config.apb_vif) ) begin
