@@ -20,7 +20,7 @@
       super.new(name);
       item = md_seq_item_drv_master::type_id::create("item"); 
       //do NOT insert a 2nd actual argument "this", bcz "this" shall be a component
-      item.data_default.constraint_mode(0);
+      item.size_default.constraint_mode(0);
       item.offset_default.constraint_mode(0);
     endfunction: new
 
