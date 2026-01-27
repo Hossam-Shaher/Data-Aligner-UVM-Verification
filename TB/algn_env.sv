@@ -45,9 +45,10 @@
     super.build_phase(phase);
     m_algn_env_config = algn_env_config::type_id::create("m_algn_env_config", this);
     if( ! uvm_config_db#(algn_env_config)::get(this, "", "m_algn_env_config", m_algn_env_config) ) begin
-      `uvm_error(this.get_full_name(), "m_algn_env_config NOT found");
+      `uvm_error(this.get_full_name(), "m_algn_env_config NOT found")
     end    
     // manipulate properties of m_algn_env_config HERE
+    m_algn_env_config.coverage_enable_md_slave = 0;
 
     m_apb_agent = apb_agent::type_id::create("m_apb_agent", this);
     if( m_algn_env_config.coverage_enable_apb == 1 )
