@@ -22,13 +22,15 @@
 							reg_block.IRQEN,	//RW
                             reg_block.IRQ		//RQ
                            };
-            
-      config_registers.shuffle();
-      
+                  
       foreach(config_registers[i]) begin
         assert (config_registers[i].randomize());
         config_registers[i].update(status);
       end 
+      
+      reg_block.IRQEN.set(32'h00_00_00_1F);
+      reg_block.IRQEN.update(status);
+      
     endtask: body
     
   endclass: algn_sequence_config_reg
