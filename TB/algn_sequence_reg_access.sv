@@ -30,25 +30,29 @@
       
       reg_block.get_registers(registers);
       
+      //Read than write
       repeat (num_accesses) begin
         registers.shuffle();
         
-        //write_access
+        //read access
+        registers[0].read(status, data);
+        
+        //write access
         assert (registers[0].randomize());
         registers[0].update(status);
         
-        //read_access
-        registers[0].read(status, data);
-        
         //Note 1:
-        //Some register fields are WO
+        //Read access before write access to discover bugs in reset (initial) values.
         
         //Note 2:
-        //Do not forget to call: default_map.set_check_on_read(1);
+        //Some register fields are WO
         
         //Note 3:
-        //It may be useful to display predictor info reports (UVM_HIGH).
-        //predictor.set_report_verbosity_level(UVM_HIGH);
+        //In algn_reg_block, do not forget to call: default_map.set_check_on_read(1); 
+        
+        //Note 4:
+        //It may be useful to display predictor info reports (UVM_HIGH)
+        //In algn_env, uncomment the following line: predictor.set_report_verbosity_level(UVM_HIGH);
               
         #(delay);
       end
