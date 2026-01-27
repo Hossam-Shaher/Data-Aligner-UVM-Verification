@@ -17,7 +17,7 @@
     algn_sequence_status_reg	m_algn_sequence_status_reg;
 
     //Number of MD RX (master) transactions (used in a "repeat")
-    protected int unsigned num_md_rx_transactions = 20;
+    protected int unsigned num_md_rx_transactions = 100;
 
     function new(string name, uvm_component parent);
       super.new(name, parent);
@@ -30,10 +30,14 @@
       m_md_sequence_slave			= md_sequence_slave::type_id::create("m_md_sequence_slave", this);
       m_algn_sequence_config_reg 	= algn_sequence_config_reg::type_id::create("m_algn_sequence_config_reg", this);
       m_algn_sequence_status_reg 	= algn_sequence_status_reg::type_id::create("m_algn_sequence_status_reg", this);
+      
     endfunction: build_phase 
 
     task run_phase (uvm_phase phase);
       uvm_status_e status;
+      
+      m_algn_sequence_config_reg.reg_block = m_algn_env.model.reg_block;
+      m_algn_sequence_status_reg.reg_block = m_algn_env.model.reg_block;
 
       phase.raise_objection(this, "algn_test_random", 1);
       #100ns;
@@ -47,36 +51,41 @@
               m_md_sequence_slave.start(m_algn_env.m_md_agent_slave.m_md_sequencer_slave);
           end
       join_none
-
-      //See tutorial #156 for more complicated test.
-
+          
       /////////////////////////////
       //m_algn_sequence_config_reg
       /////////////////////////////
 
-      m_algn_sequence_config_reg.reg_block = m_algn_env.model.reg_block;
       assert( m_algn_sequence_config_reg.randomize() );
       m_algn_sequence_config_reg.start(null);
 
-      ///////////////////////
-      //m_md_sequence_master
-      ///////////////////////
-
+      //repeat loop
       repeat(num_md_rx_transactions) begin
-          assert( m_md_sequence_master.randomize() );
-          m_md_sequence_master.start(m_algn_env.m_md_agent_master.m_md_sequencer_master);
+
+        ///////////////////////
+        //m_md_sequence_master
+        ///////////////////////
+
+        assert( m_md_sequence_master.randomize() );
+        m_md_sequence_master.start(m_algn_env.m_md_agent_master.m_md_sequencer_master);
+
+        /////////////////////////////
+        //m_algn_sequence_status_reg
+        /////////////////////////////
+
+        #1000;	
+        //Note: This delay is neccessary... Why? 
+        //BCZ there is no sync between the model and the DUT, and hence, 
+        //the mirrored value in the register model is updated by the model before the DUT update its registers. 
+        //Comparing these two value will produce an error, 
+        //so, We have to wait for the DUT until it update its registers before the read access.
+
+        assert( m_algn_sequence_status_reg.randomize() );
+        m_algn_sequence_status_reg.start(null);
+
       end
-
-      /////////////////////////////
-      //m_algn_sequence_status_reg
-      /////////////////////////////
-
-      #500;
-      m_algn_sequence_status_reg.reg_block = m_algn_env.model.reg_block;
-      assert( m_algn_sequence_status_reg.randomize() );
-      m_algn_sequence_status_reg.start(null);
-
-      #500
+      
+      #100;
       phase.drop_objection(this, "algn_test_random", 1);
 
     endtask: run_phase
