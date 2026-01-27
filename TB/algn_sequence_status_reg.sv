@@ -14,15 +14,13 @@
     endfunction: new
     
     task body();
-      uvm_reg 			status_registers[$];
+      uvm_reg 			  status_registers[$];
       uvm_status_e 		status;
       uvm_reg_data_t 	data;
       
       //status registers are those with "access rights" == "RO"
       status_registers =  '{ reg_block.STATUS };
-      
-      status_registers.shuffle();
-      
+            
       foreach(status_registers[i]) begin
         status_registers[i].read(status, data);
       end 
