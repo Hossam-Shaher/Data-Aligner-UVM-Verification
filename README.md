@@ -51,7 +51,7 @@ In this project, the Data Aligner is modeled and verified using the **SystemVeri
 4. **"Data Aligner - Results" (A PDF document).**
     * It contains: (1) testing results, (2) coverage results, and (3) assertion results. 
 
-The following figures shows **the structure of the UVM testbench**. 
+The following figures show the **structure of the UVM testbench**. 
 
 For more details, see: *Data Aligner - Architecture of The Verification Environment*.  
 
