@@ -61,4 +61,4 @@ For more details, see: *Data Aligner - Architecture of The Verification Environm
 
 <img width="931" height="527.5" alt="image" src="https://github.com/user-attachments/assets/6d2cf5c7-27ec-4600-8734-439fe9deff28" />
 
-<img width="959.5" height="369.5" alt="image" src="https://github.com/user-attachments/assets/66ca7bf5-8866-4daf-9049-4f65518c5625" />
+<img width="959.5" height="368.5" alt="image" src="https://github.com/user-attachments/assets/66ca7bf5-8866-4daf-9049-4f65518c5625" />
